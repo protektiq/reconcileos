@@ -1,0 +1,5 @@
+name: seed-bot
+version: 0.1.0
+description: Seed bot manifest placeholder for ReconcileOS bootstrap.
+entrypoint: ./seed-bot.sh
+runtime: driftlessaf-go

@@ -1,0 +1,5 @@
+app = "reconcileos"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../api/Dockerfile"
