@@ -79,3 +79,32 @@ flowchart TD
     protectedRoutes --> attestationsRoute[AttestationsRoute]
     protectedRoutes -->|missingSession| loginRoute
 ```
+
+## Runtime Event Dispatch And Execution Flow
+
+```mermaid
+flowchart TD
+    githubWebhookEvent[GitHubWebhookEvent] --> eventsTable[SupabaseEventsTable]
+    runtimeMain[RuntimeMain] --> dispatcherLoop[DispatcherLoop5s]
+    runtimeMain --> executorLoop[ExecutorLoop]
+
+    dispatcherLoop --> dispatchLock[RuntimeTryLockDispatch]
+    dispatchLock --> unprocessedEvents[QueryProcessedFalseLimit50]
+    unprocessedEvents --> activeInstalls[ActiveBotInstallationsByOrg]
+    activeInstalls --> botManifestLoad[LoadBotManifestJson]
+    botManifestLoad --> triggerMatch[MatchEventTypeToTriggers]
+    triggerMatch --> queuedExecutionInsert[InsertExecutionQueued]
+    queuedExecutionInsert --> markProcessed[MarkEventProcessedTrue]
+
+    executorLoop --> execLock[RuntimeTryLockExecutor]
+    execLock --> queuedExecutions[QueryQueuedExecutionsLimit10]
+    queuedExecutions --> markRunning[SetExecutionRunningStartedAt]
+    markRunning --> runtimeSubprocess[SpawnBotSubprocess]
+    runtimeSubprocess --> executionWorkdir[TmpExecutionWorkspace]
+    runtimeSubprocess --> outputCapture[CaptureStdoutStderr]
+    outputCapture --> statusUpdate[UpdateExecutionCompletedOrFailed]
+    statusUpdate --> reviewFlag[SetRequiresReviewWhenRequested]
+
+    runtimeMain --> gracefulShutdown[SigtermDrain30s]
+    gracefulShutdown --> forceCancel[CancelRemainingProcessesAfterDrain]
+```
