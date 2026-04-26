@@ -55,6 +55,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	executionService, err := services.NewExecutionService(clients)
+	if err != nil {
+		panic(err)
+	}
 	triageService, err := services.NewTriageService(cfg.AnthropicAPIKey, cfg.AnthropicAPIBaseURL, cfg.AnthropicModel)
 	if err != nil {
 		panic(err)
@@ -109,6 +113,13 @@ func main() {
 		queueGroup.GET("/:id", handlers.ReviewQueueGet(clients))
 		queueGroup.POST("/:id/approve", handlers.ReviewQueueApprove(clients, prService, attestationService, cfg.RekorURL))
 		queueGroup.POST("/:id/reject", handlers.ReviewQueueReject(clients))
+
+		repoGroup := apiV1Group.Group("/repos")
+		repoGroup.GET("/:repo_full_name/status", handlers.RepoStatus(executionService))
+
+		executionGroup := apiV1Group.Group("/executions")
+		executionGroup.POST("/trigger", handlers.TriggerExecution(executionService))
+		executionGroup.GET("/:id/status", handlers.ExecutionStatus(executionService))
 	}
 
 	server := &http.Server{

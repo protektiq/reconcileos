@@ -197,3 +197,32 @@ flowchart LR
     streamApi -->|review_required| dashboardUi
     streamApi -->|attestation_issued| dashboardUi
 ```
+
+## recos CLI Phase1 Flow
+
+```mermaid
+flowchart TD
+    recosCmd[RecosCliCommand] --> parseCmd[ClapSubcommandParse]
+    parseCmd --> loginCmd[LoginCommand]
+    parseCmd --> statusCmd[StatusCommand]
+    parseCmd --> runCmd[RunCommand]
+    parseCmd --> verifyCmd[VerifyCommand]
+    parseCmd --> publishCmd[PublishStub]
+
+    loginCmd --> browserOAuth[OpenGitHubOAuthBrowser]
+    browserOAuth --> localCallback[LocalCallbackServer9876]
+    localCallback --> apiOAuthExchange[POSTAuthGitHubCallback]
+    apiOAuthExchange --> keychainStore[StoreSupabaseAccessTokenInKeychain]
+
+    statusCmd --> gitDetect[ResolveRepoFromGitConfig]
+    gitDetect --> repoStatusCall[GETApiV1ReposRepoFullNameStatus]
+    repoStatusCall --> statusRender[RenderColoredStatusTable]
+
+    runCmd --> gitDetectRun[ResolveRepoFromGitConfig]
+    gitDetectRun --> triggerExec[POSTApiV1ExecutionsTrigger]
+    triggerExec --> pollExec[PollExecutionStatusEvery2Seconds]
+    pollExec --> diffRender[RenderColoredDiffAndSummary]
+
+    verifyCmd --> verifyCall[POSTApiV1AttestationsVerify]
+    verifyCall --> verifyRender[RenderInclusionProofVerification]
+```
