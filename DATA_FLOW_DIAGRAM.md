@@ -63,3 +63,19 @@ flowchart TD
     orgEnsure --> usersUpsert[UsersTableUpsert]
     usersUpsert --> frontendTokens[FrontendSessionTokens]
 ```
+
+## Web Frontend Auth And Route Guard Flow
+
+```mermaid
+flowchart TD
+    webClient[WebClientBrowser] --> loginRoute[LoginRoute]
+    loginRoute --> githubOAuth[SupabaseGitHubOAuth]
+    githubOAuth --> callbackRoute[AuthCallbackRoute]
+    callbackRoute --> sessionSet[ZustandAuthStoreSetSession]
+    sessionSet --> protectedRoutes[ProtectedRoutes]
+    protectedRoutes --> dashboardRoute[DashboardRoute]
+    protectedRoutes --> marketplaceRoute[MarketplaceRoute]
+    protectedRoutes --> queueRoute[QueueRoute]
+    protectedRoutes --> attestationsRoute[AttestationsRoute]
+    protectedRoutes -->|missingSession| loginRoute
+```
