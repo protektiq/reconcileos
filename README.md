@@ -19,6 +19,14 @@ Monorepo for the ReconcileOS platform, including:
 | Database / Auth | `supabase/`, `infra/supabase/` | SQL + config | Supabase (Postgres, Auth, RLS) | Schema, policies, auth/session backing services |
 | Infra / Ops | `infra/` | IaC + scripts | Deployment config and environment management | Runtime/API deployment and operational configuration |
 
+### Open Source Tooling In Use
+
+| Tool | Integration Area | How It Is Used |
+|---|---|---|
+| DriftlessAF | `runtime/` architecture | Runtime design and execution model are aligned for DriftlessAF-compatible bot execution workflows |
+| OpenRewrite | `bots/` and runtime execution flow | Applies automated code remediation/security recipes and generates execution diffs/results |
+| Sigstore Rekor | `api/services/attestation.go` | Stores/verifies attestation transparency log entries and inclusion proof data |
+
 ## Current Status
 
 Phase 1 CLI + API flow is implemented:
