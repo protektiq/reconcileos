@@ -8,6 +8,17 @@ Monorepo for the ReconcileOS platform, including:
 - `web` frontend app.
 - `infra` and `supabase` infrastructure/schema assets.
 
+## Stack Overview
+
+| Layer | Path | Primary Language | Frameworks / Libraries | Purpose |
+|---|---|---|---|---|
+| Frontend | `web/` | TypeScript | React, Vite, TailwindCSS, Supabase JS | User-facing dashboard and workflow UI |
+| API | `api/` | Go | Gin, Supabase Go/PostgREST, Zerolog | Auth, org-scoped APIs, triage, queue, attestations, execution endpoints |
+| Runtime | `runtime/` | Go | Supabase PostgREST client, OS process tooling | Polls queued work and executes bot runs |
+| CLI | `cli/` | Rust | clap v4, reqwest, keyring, anyhow, colored | `recos` terminal UX for login/status/run/verify |
+| Database / Auth | `supabase/`, `infra/supabase/` | SQL + config | Supabase (Postgres, Auth, RLS) | Schema, policies, auth/session backing services |
+| Infra / Ops | `infra/` | IaC + scripts | Deployment config and environment management | Runtime/API deployment and operational configuration |
+
 ## Current Status
 
 Phase 1 CLI + API flow is implemented:
