@@ -36,3 +36,30 @@ flowchart TD
     usersTable --> ctxScope[ContextUserAndOrg]
     ctxScope --> handler[OrgScopedHandler]
 ```
+
+## GitHub App Integration Flow
+
+```mermaid
+flowchart TD
+    githubWebhook[GitHubWebhook] --> webhookEndpoint[AuthWebhookEndpoint]
+    webhookEndpoint --> sigValidation[SignatureValidation]
+    sigValidation -->|valid| ackNow[Immediate200Ack]
+    sigValidation -->|invalid| reject401[Reject401AndLog]
+    ackNow --> asyncProcessing[AsyncWebhookProcessing]
+    asyncProcessing --> eventTypeCheck[EventTypeFilter]
+    eventTypeCheck --> installationLookup[InstallationToOrgLookup]
+    installationLookup --> mappingTable[GitHubInstallationsTable]
+    installationLookup --> githubApiLookup[GitHubInstallationLookup]
+    githubApiLookup --> orgsLookup[OrgsTableBySlug]
+    orgsLookup --> mappingUpsert[GitHubInstallationsUpsert]
+    mappingTable --> eventsInsert[EventsTableInsert]
+    mappingUpsert --> eventsInsert
+
+    oauthRedirect[GitHubOAuthRedirect] --> oauthCallback[AuthGitHubCallbackEndpoint]
+    oauthCallback --> oauthCodeExchange[GitHubCodeExchange]
+    oauthCodeExchange --> githubUserFetch[GitHubUserFetch]
+    githubUserFetch --> supabaseSession[SupabaseSessionIssue]
+    supabaseSession --> orgEnsure[OrgEnsureByGitHubLogin]
+    orgEnsure --> usersUpsert[UsersTableUpsert]
+    usersUpsert --> frontendTokens[FrontendSessionTokens]
+```

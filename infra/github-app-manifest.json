@@ -1,0 +1,21 @@
+{
+  "name": "reconcileos-dev",
+  "url": "http://localhost:8080",
+  "hook_attributes": {
+    "url": "http://localhost:8080/auth/webhooks/github"
+  },
+  "redirect_url": "http://localhost:5173/auth/github/callback",
+  "default_permissions": {
+    "contents": "write",
+    "pull_requests": "write",
+    "checks": "write",
+    "metadata": "read"
+  },
+  "default_events": [
+    "push",
+    "pull_request",
+    "installation",
+    "installation_repositories"
+  ],
+  "description": "ReconcileOS GitHub App integration (set name=reconcileos for production registration)."
+}

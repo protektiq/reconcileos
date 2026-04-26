@@ -1,11 +1,14 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"reconcileos.dev/api/db"
@@ -38,17 +41,9 @@ func JWTAuthMiddleware(supabaseURL string, clients *db.SupabaseClients) (gin.Han
 		return nil, fmt.Errorf("build jwks URL: %w", err)
 	}
 
-	jwks, err := keyfunc.Get(jwksURL, keyfunc.Options{
-		RefreshInterval:   time.Hour,
-		RefreshUnknownKID: true,
-		RefreshErrorHandler: func(err error) {
-			// We deliberately swallow JWKS background refresh errors from bubbling into request flow.
-			_ = err
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("initialize JWKS: %w", err)
-	}
+	var jwks *keyfunc.JWKS
+	var jwksErr error
+	var jwksMutex sync.RWMutex
 
 	return func(c *gin.Context) {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
@@ -63,8 +58,14 @@ func JWTAuthMiddleware(supabaseURL string, clients *db.SupabaseClients) (gin.Han
 			return
 		}
 
+		resolvedJWKS, err := getOrInitJWKS(jwksURL, clients.AnonKey, &jwks, &jwksErr, &jwksMutex)
+		if err != nil {
+			abortUnauthorized(c, "invalid or expired token")
+			return
+		}
+
 		claims := jwt.RegisteredClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, &claims, jwks.Keyfunc)
+		token, err := jwt.ParseWithClaims(tokenString, &claims, resolvedJWKS.Keyfunc)
 		if err != nil || token == nil || !token.Valid {
 			abortUnauthorized(c, "invalid or expired token")
 			return
@@ -114,6 +115,57 @@ func buildJWKSURL(supabaseURL string) (string, error) {
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/auth/v1/keys"
 
 	return parsed.String(), nil
+}
+
+func getOrInitJWKS(
+	jwksURL string,
+	anonKey string,
+	cachedJWKS **keyfunc.JWKS,
+	cachedErr *error,
+	jwksMutex *sync.RWMutex,
+) (*keyfunc.JWKS, error) {
+	jwksMutex.RLock()
+	if *cachedJWKS != nil {
+		defer jwksMutex.RUnlock()
+		return *cachedJWKS, nil
+	}
+	jwksMutex.RUnlock()
+
+	jwksMutex.Lock()
+	defer jwksMutex.Unlock()
+
+	if *cachedJWKS != nil {
+		return *cachedJWKS, nil
+	}
+
+	jwks, err := keyfunc.Get(jwksURL, keyfunc.Options{
+		RefreshInterval:   time.Hour,
+		RefreshUnknownKID: true,
+		Client:            &http.Client{Timeout: 10 * time.Second},
+		RequestFactory: func(ctx context.Context, url string) (*http.Request, error) {
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, bytes.NewReader(nil))
+			if err != nil {
+				return nil, err
+			}
+			trimmedAnonKey := strings.TrimSpace(anonKey)
+			if trimmedAnonKey != "" {
+				req.Header.Set("apikey", trimmedAnonKey)
+				req.Header.Set("Authorization", "Bearer "+trimmedAnonKey)
+			}
+			return req, nil
+		},
+		RefreshErrorHandler: func(err error) {
+			*cachedErr = err
+		},
+	})
+	if err != nil {
+		*cachedErr = err
+		return nil, err
+	}
+
+	*cachedJWKS = jwks
+	*cachedErr = nil
+	return *cachedJWKS, nil
 }
 
 func lookupOrgID(_ context.Context, clients *db.SupabaseClients, userID string) (string, error) {

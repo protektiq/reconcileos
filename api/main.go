@@ -15,6 +15,7 @@ import (
 	"reconcileos.dev/api/db"
 	"reconcileos.dev/api/handlers"
 	"reconcileos.dev/api/middleware"
+	"reconcileos.dev/api/services"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -40,9 +41,21 @@ func main() {
 
 	router.GET("/health", handlers.Health(cfg.AppVersion))
 
+	githubService, err := services.NewGitHubService(
+		cfg.GitHubAppID,
+		cfg.GitHubPrivateKey,
+		cfg.GitHubClientID,
+		cfg.GitHubClientSecret,
+		cfg.GitHubAPIBaseURL,
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	authGroup := router.Group("/auth")
 	{
-		_ = authGroup
+		authGroup.POST("/webhooks/github", handlers.GitHubWebhook(clients, githubService, cfg.GitHubWebhookSecret))
+		authGroup.POST("/github/callback", handlers.GitHubOAuthCallback(clients, githubService))
 	}
 
 	jwtMiddleware, err := middleware.JWTAuthMiddleware(cfg.SupabaseURL, clients)
