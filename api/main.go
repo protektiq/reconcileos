@@ -66,7 +66,8 @@ func main() {
 	apiV1Group := router.Group("/api/v1")
 	apiV1Group.Use(jwtMiddleware)
 	{
-		_ = apiV1Group
+		githubGroup := apiV1Group.Group("/github")
+		githubGroup.GET("/installation-token", handlers.GitHubInstallationToken(clients, githubService))
 	}
 
 	server := &http.Server{

@@ -108,3 +108,33 @@ flowchart TD
     runtimeMain --> gracefulShutdown[SigtermDrain30s]
     gracefulShutdown --> forceCancel[CancelRemainingProcessesAfterDrain]
 ```
+
+## OpenRewrite CVE Patcher Flow
+
+```mermaid
+flowchart TD
+    runtimeExecution[RuntimeExecutionStart] --> botContainer[OpenRewriteCvePatcherContainer]
+    botContainer --> envValidation[ValidateRequiredExecutionEnv]
+    envValidation --> tokenRequest[CallApiV1GithubInstallationToken]
+    tokenRequest --> orgScopedLookup[ApiOrgScopedInstallationLookup]
+    orgScopedLookup --> githubMint[GitHubAppInstallationTokenMint]
+    githubMint --> cloneRepo[CloneTargetRepoWithAskPass]
+    cloneRepo --> runRecipes[RunOpenRewriteSecurityRecipes]
+    runRecipes --> gitDiff[CollectUnifiedDiffAndChangedFiles]
+    gitDiff --> jsonOutput[EmitExecutionResultJson]
+    botContainer --> cleanupTemp[DeleteTempCloneDirectoryOnExit]
+
+    subgraph trustBoundary [TrustBoundaryBotContainer]
+      envValidation
+      tokenRequest
+      cloneRepo
+      runRecipes
+      gitDiff
+      cleanupTemp
+    end
+```
+
+### Credential Lifecycle Notes
+- The bot requests a short-lived GitHub installation token from a JWT-protected API endpoint scoped to the authenticated org.
+- The token remains in process memory only and is supplied to git through `GIT_ASKPASS` to avoid git credential helper persistence.
+- Temporary clone workspace and helper script are deleted on every exit path via trap-based cleanup.
