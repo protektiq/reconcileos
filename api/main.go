@@ -55,11 +55,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	triageService, err := services.NewTriageService(cfg.AnthropicAPIKey, cfg.AnthropicAPIBaseURL, cfg.AnthropicModel)
+	if err != nil {
+		panic(err)
+	}
+	prService, err := services.NewPRService(clients, githubService)
+	if err != nil {
+		panic(err)
+	}
 	attestationExportService, err := services.NewAttestationExportService(attestationService)
 	if err != nil {
 		panic(err)
 	}
 	_ = attestationExportService
+	_ = prService
 
 	authGroup := router.Group("/auth")
 	{
@@ -86,6 +95,9 @@ func main() {
 		attestationsGroup := apiV1Group.Group("/attestations")
 		attestationsGroup.GET("", handlers.ListAttestations(attestationService))
 		attestationsGroup.GET("/:id", handlers.GetAttestation(attestationService))
+
+		triageGroup := apiV1Group.Group("/triage")
+		triageGroup.POST("/score", handlers.TriageScore(triageService))
 	}
 
 	server := &http.Server{

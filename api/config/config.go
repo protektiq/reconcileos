@@ -20,6 +20,9 @@ type Config struct {
 	GitHubClientID      string
 	GitHubClientSecret  string
 	GitHubAPIBaseURL    string
+	AnthropicAPIKey     string
+	AnthropicAPIBaseURL string
+	AnthropicModel      string
 }
 
 func Load() Config {
@@ -38,6 +41,9 @@ func Load() Config {
 		GitHubClientID:      mustGet("GITHUB_CLIENT_ID"),
 		GitHubClientSecret:  mustGet("GITHUB_CLIENT_SECRET"),
 		GitHubAPIBaseURL:    getOrDefault("GITHUB_API_BASE_URL", "https://api.github.com"),
+		AnthropicAPIKey:     mustGet("ANTHROPIC_API_KEY"),
+		AnthropicAPIBaseURL: getOrDefault("ANTHROPIC_API_BASE_URL", "https://api.anthropic.com"),
+		AnthropicModel:      getOrDefault("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
 	}
 
 	return cfg

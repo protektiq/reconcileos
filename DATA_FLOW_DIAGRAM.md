@@ -152,3 +152,26 @@ flowchart TD
     rekorSubmit --> publicVerify[PublicVerifyByArtifactHash]
     attestationWrite --> complianceExport[ComplianceBundleExport]
 ```
+
+## Claude CVE Triage And Remediation PR Flow
+
+```mermaid
+flowchart TD
+    runtimeBot[ClaudeTriageBotRuntime] --> triageEndpoint[PostApiV1TriageScore]
+    triageEndpoint --> triageHandler[TriageScoreHandler]
+    triageHandler --> orgScope[OrgIdFromJwtContext]
+    orgScope --> triageService[TriageServiceScoreCVE]
+    triageService --> anthropicReq[AnthropicMessagesRequest]
+    anthropicReq --> metadataTag[RequestMetadataOrgId]
+    metadataTag --> anthropicApi[AnthropicClaudeSonnet4]
+    anthropicApi --> triageJson[TriageResultJson]
+    triageJson --> runtimeBot
+
+    runtimeBot --> summaryGen[TriageServiceGeneratePRSummary]
+    summaryGen --> remediationSvc[PRServiceCreateRemediationPR]
+    remediationSvc --> installLookup[GitHubInstallationLookupByOrg]
+    installLookup --> githubToken[GitHubAppInstallationToken]
+    githubToken --> githubPrApi[GitHubPullRequestCreate]
+    remediationSvc --> prBodyTemplate[PRBodyWithAttestationAndAiWarning]
+    prBodyTemplate --> githubPrApi
+```
