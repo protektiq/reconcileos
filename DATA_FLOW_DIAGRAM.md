@@ -138,3 +138,17 @@ flowchart TD
 - The bot requests a short-lived GitHub installation token from a JWT-protected API endpoint scoped to the authenticated org.
 - The token remains in process memory only and is supplied to git through `GIT_ASKPASS` to avoid git credential helper persistence.
 - Temporary clone workspace and helper script are deleted on every exit path via trap-based cleanup.
+
+## Sigstore Attestation Engine Flow
+
+```mermaid
+flowchart TD
+    executionContext[ExecutionContextLookup] --> slsaBuild[SlsaStatementBuild]
+    slsaBuild --> oidcIdentity[OidcIdentityResolve]
+    oidcIdentity --> keylessSign[SigstoreKeylessSign]
+    keylessSign --> rekorSubmit[RekorSubmitAndInclusion]
+    rekorSubmit --> attestationWrite[AttestationsTableInsert]
+    attestationWrite --> orgList[OrgScopedListAndGet]
+    rekorSubmit --> publicVerify[PublicVerifyByArtifactHash]
+    attestationWrite --> complianceExport[ComplianceBundleExport]
+```

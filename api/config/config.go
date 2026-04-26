@@ -12,6 +12,8 @@ type Config struct {
 	SupabaseAnonKey     string
 	SupabaseServiceKey  string
 	AllowedOriginFly    string
+	RekorURL            string
+	FlyOIDCToken        string
 	GitHubAppID         string
 	GitHubWebhookSecret string
 	GitHubPrivateKey    string
@@ -28,6 +30,8 @@ func Load() Config {
 		SupabaseAnonKey:     mustGet("SUPABASE_ANON_KEY"),
 		SupabaseServiceKey:  mustGet("SUPABASE_SERVICE_ROLE_KEY"),
 		AllowedOriginFly:    strings.TrimSpace(os.Getenv("ALLOWED_ORIGIN_FLY")),
+		RekorURL:            getOrDefault("REKOR_URL", "https://rekor.sigstore.dev"),
+		FlyOIDCToken:        strings.TrimSpace(os.Getenv("FLY_OIDC_TOKEN")),
 		GitHubAppID:         mustGet("GITHUB_APP_ID"),
 		GitHubWebhookSecret: mustGet("GITHUB_APP_WEBHOOK_SECRET"),
 		GitHubPrivateKey:    mustGet("GITHUB_APP_PRIVATE_KEY"),

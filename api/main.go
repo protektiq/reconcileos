@@ -51,11 +51,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	attestationService, err := services.NewAttestationService(clients, cfg.RekorURL, cfg.FlyOIDCToken)
+	if err != nil {
+		panic(err)
+	}
+	attestationExportService, err := services.NewAttestationExportService(attestationService)
+	if err != nil {
+		panic(err)
+	}
+	_ = attestationExportService
 
 	authGroup := router.Group("/auth")
 	{
 		authGroup.POST("/webhooks/github", handlers.GitHubWebhook(clients, githubService, cfg.GitHubWebhookSecret))
 		authGroup.POST("/github/callback", handlers.GitHubOAuthCallback(clients, githubService))
+	}
+
+	publicAttestationGroup := router.Group("/api/v1/attestations")
+	{
+		publicAttestationGroup.POST("/verify", handlers.VerifyAttestation(attestationService))
 	}
 
 	jwtMiddleware, err := middleware.JWTAuthMiddleware(cfg.SupabaseURL, clients)
@@ -68,6 +82,10 @@ func main() {
 	{
 		githubGroup := apiV1Group.Group("/github")
 		githubGroup.GET("/installation-token", handlers.GitHubInstallationToken(clients, githubService))
+
+		attestationsGroup := apiV1Group.Group("/attestations")
+		attestationsGroup.GET("", handlers.ListAttestations(attestationService))
+		attestationsGroup.GET("/:id", handlers.GetAttestation(attestationService))
 	}
 
 	server := &http.Server{
