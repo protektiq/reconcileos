@@ -81,6 +81,11 @@ func main() {
 		publicAttestationGroup.POST("/verify", handlers.VerifyAttestation(attestationService))
 	}
 
+	publicStreamGroup := router.Group("/api/v1")
+	{
+		publicStreamGroup.GET("/stream", handlers.EventsStream(clients, cfg.SupabaseURL, cfg.SupabaseAnonKey))
+	}
+
 	jwtMiddleware, err := middleware.JWTAuthMiddleware(cfg.SupabaseURL, clients)
 	if err != nil {
 		panic(err)
@@ -98,6 +103,12 @@ func main() {
 
 		triageGroup := apiV1Group.Group("/triage")
 		triageGroup.POST("/score", handlers.TriageScore(triageService))
+
+		queueGroup := apiV1Group.Group("/queue")
+		queueGroup.GET("", handlers.ReviewQueueList(clients))
+		queueGroup.GET("/:id", handlers.ReviewQueueGet(clients))
+		queueGroup.POST("/:id/approve", handlers.ReviewQueueApprove(clients, prService, attestationService, cfg.RekorURL))
+		queueGroup.POST("/:id/reject", handlers.ReviewQueueReject(clients))
 	}
 
 	server := &http.Server{

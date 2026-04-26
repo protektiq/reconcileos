@@ -175,3 +175,25 @@ flowchart TD
     remediationSvc --> prBodyTemplate[PRBodyWithAttestationAndAiWarning]
     prBodyTemplate --> githubPrApi
 ```
+
+## Review Queue And Live Feed Flow
+
+```mermaid
+flowchart LR
+    reviewerUi[ReviewerUI] -->|GET api/v1/queue| queueApi[ReviewQueueHandler]
+    reviewerUi -->|POST approve reject| queueApi
+    queueApi --> reviewTable[ReviewQueueTable]
+    queueApi --> execTable[ExecutionsTable]
+    queueApi --> prSvc[PRService]
+    queueApi --> attestSvc[AttestationService]
+    prSvc --> githubPr[GitHubPullRequest]
+    attestSvc --> attTable[AttestationsTable]
+
+    dashboardUi[DashboardUI] -->|GET api/v1/stream token| streamApi[EventsStreamHandler]
+    streamApi -->|poll3s| execTable
+    streamApi -->|poll3s| reviewTable
+    streamApi -->|poll3s| attTable
+    streamApi -->|execution_update| dashboardUi
+    streamApi -->|review_required| dashboardUi
+    streamApi -->|attestation_issued| dashboardUi
+```

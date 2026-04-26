@@ -59,31 +59,32 @@ func NewPRService(clients *db.SupabaseClients, githubService *GitHubService) (*P
 	}, nil
 }
 
-func (s *PRService) CreateRemediationPR(ctx context.Context, input RemediationPRInput) error {
+func (s *PRService) CreateRemediationPR(ctx context.Context, input RemediationPRInput) (string, error) {
 	normalized, err := normalizeRemediationPRInput(input)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	installationID, err := lookupInstallationIDByOrg(ctx, s.clients, normalized.OrgID)
 	if err != nil {
-		return fmt.Errorf("resolve github installation for org: %w", err)
+		return "", fmt.Errorf("resolve github installation for org: %w", err)
 	}
 
 	changedFiles := extractChangedFilesFromDiff(normalized.Diff)
 	prBody := buildRemediationPRBody(normalized.Summary, normalized.Attestation, changedFiles)
 
-	if err := s.githubService.OpenPullRequest(
+	prURL, err := s.githubService.OpenPullRequest(
 		installationID,
 		normalized.Repo,
 		normalized.PRTitle,
 		prBody,
 		normalized.BranchName,
-	); err != nil {
-		return fmt.Errorf("open remediation pull request: %w", err)
+	)
+	if err != nil {
+		return "", fmt.Errorf("open remediation pull request: %w", err)
 	}
 
-	return nil
+	return prURL, nil
 }
 
 func normalizeRemediationPRInput(input RemediationPRInput) (RemediationPRInput, error) {

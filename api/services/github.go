@@ -197,36 +197,36 @@ func (s *GitHubService) GetInstallationOrgSlug(installationID int64) (string, er
 	return orgSlug, nil
 }
 
-func (s *GitHubService) OpenPullRequest(installationID int64, repo, title, body, branch string) error {
+func (s *GitHubService) OpenPullRequest(installationID int64, repo, title, body, branch string) (string, error) {
 	cleanRepo := strings.TrimSpace(repo)
 	cleanTitle := strings.TrimSpace(title)
 	cleanBody := strings.TrimSpace(body)
 	cleanBranch := strings.TrimSpace(branch)
 
 	if installationID <= 0 {
-		return fmt.Errorf("installation ID must be positive")
+		return "", fmt.Errorf("installation ID must be positive")
 	}
 	if cleanRepo == "" || len(cleanRepo) > maxRepoNameLength || !strings.Contains(cleanRepo, "/") {
-		return fmt.Errorf("repo must be in owner/name format")
+		return "", fmt.Errorf("repo must be in owner/name format")
 	}
 	if cleanTitle == "" || len(cleanTitle) > maxPRTitleLength {
-		return fmt.Errorf("pull request title must be 1-%d chars", maxPRTitleLength)
+		return "", fmt.Errorf("pull request title must be 1-%d chars", maxPRTitleLength)
 	}
 	if len(cleanBody) > maxPRBodyLength {
-		return fmt.Errorf("pull request body exceeds %d chars", maxPRBodyLength)
+		return "", fmt.Errorf("pull request body exceeds %d chars", maxPRBodyLength)
 	}
 	if cleanBranch == "" || len(cleanBranch) > maxBranchLength {
-		return fmt.Errorf("branch must be 1-%d chars", maxBranchLength)
+		return "", fmt.Errorf("branch must be 1-%d chars", maxBranchLength)
 	}
 
 	installationToken, err := s.GenerateInstallationToken(installationID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defaultBranch, err := s.getRepositoryDefaultBranch(installationToken, cleanRepo)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	requestBody := githubPRRequest{
@@ -237,13 +237,13 @@ func (s *GitHubService) OpenPullRequest(installationID int64, repo, title, body,
 	}
 	bodyJSON, err := json.Marshal(requestBody)
 	if err != nil {
-		return fmt.Errorf("marshal pull request payload: %w", err)
+		return "", fmt.Errorf("marshal pull request payload: %w", err)
 	}
 
 	requestURL := fmt.Sprintf("%s/repos/%s/pulls", s.apiBaseURL, cleanRepo)
 	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, requestURL, bytes.NewReader(bodyJSON))
 	if err != nil {
-		return fmt.Errorf("build pull request request: %w", err)
+		return "", fmt.Errorf("build pull request request: %w", err)
 	}
 	request.Header.Set("Authorization", "token "+installationToken)
 	request.Header.Set("Accept", "application/vnd.github+json")
@@ -252,16 +252,27 @@ func (s *GitHubService) OpenPullRequest(installationID int64, repo, title, body,
 
 	response, err := s.httpClient.Do(request)
 	if err != nil {
-		return fmt.Errorf("create pull request: %w", err)
+		return "", fmt.Errorf("create pull request: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusCreated {
 		responseBody, _ := io.ReadAll(io.LimitReader(response.Body, 8192))
-		return fmt.Errorf("create pull request failed: status=%d body=%s", response.StatusCode, strings.TrimSpace(string(responseBody)))
+		return "", fmt.Errorf("create pull request failed: status=%d body=%s", response.StatusCode, strings.TrimSpace(string(responseBody)))
+	}
+	type githubPRResponse struct {
+		HTMLURL string `json:"html_url"`
+	}
+	var payload githubPRResponse
+	if err := json.NewDecoder(io.LimitReader(response.Body, 8192)).Decode(&payload); err != nil {
+		return "", fmt.Errorf("decode pull request response: %w", err)
+	}
+	prURL := strings.TrimSpace(payload.HTMLURL)
+	if prURL == "" {
+		return "", fmt.Errorf("pull request URL missing from GitHub response")
 	}
 
-	return nil
+	return prURL, nil
 }
 
 func (s *GitHubService) ExchangeOAuthCode(code, state string) (string, error) {
