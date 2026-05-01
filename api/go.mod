@@ -1,6 +1,8 @@
 module reconcileos.dev/api
 
-go 1.23.0
+go 1.24.0
+
+toolchain go1.24.13
 
 require (
 	github.com/MicahParks/keyfunc/v2 v2.1.0
@@ -44,16 +46,10 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace golang.org/x/crypto v0.23.0 => golang.org/x/crypto v0.31.0
-
-replace golang.org/x/net v0.25.0 => golang.org/x/net v0.33.0
-
-replace golang.org/x/crypto v0.31.0 => golang.org/x/crypto v0.35.0
